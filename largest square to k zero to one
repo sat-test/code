@@ -8,44 +8,65 @@ I was given a binary matrix and asked to find the upper-left corner of the large
 
 
 
-int solve(vector<vector<int>> matrix, int k) {
-    int n = matrix.size();
-    vector<vector<pair<int, int>> A(n);
-    
-    for(int i=0; i<n; i++) {
-        for(j=0; j<n; j++) {
-            A[i].push_back({0, 0});
-        }
-    }
-    
-    if(matrix[0][0] == 1)   A[0][0] = {0, 1};
-    else    A[0][0] = {1, 0};
-    
-    for(int i=1; i<n; i++) {
-       if(matrix[i][0] == 0) {
-           A[i][0] = {A[i-1][0].first+1, A[i-1][0].second};
-       } else {
-           A[i][0] = {A[i-1][0].first, A[i-1][0].second+1};
-       }
-    }
-    
-    for(int j=0; j<n; j++) {
-        if(matrix[0][j] == 0) {
-            A[0][j] = {A[0][j-1].first+1, A[0][j-1].second};
-        } else {
-            A[0][j] = {A[0][i-1].first, A[0][j-1].second+1};
-        }
-    }
-    
-    for(int i=1; i<n; i++) {
-        for(int j=1; j<n; j++) {
-            A[0][j] = {A[]}
-        }
-    }
+int calculate(vector<vector<int>> &A, int i, int j, int pi, int pj) {
+    int a = 0, b = 0, c = 0, d = 0;
+    a = A[i][j];
+    if(pi-1 >= 0)    b = A[pi-1][pj];
+    if(pj-1 >= 0)    c = A[pi][pj-1];
+    if(pi-1 >= 0 && pj-1 >= 0)    d = A[pi-1][pj-1];
+    return a + d - (b + c);
 }
 
+
+int evaluateArea(vector<vector<int>> &A, int k, int i, int j, int n, int m) {
+    int pi = i, pj = j;
+    int area = 0;
+    while(i < n && j < m) {
+        int ones = calculate(A, i, j, pi, pj);
+        int size = (i-pi+1)*(j-pj+1);
+        int zero = size - ones;
+        if(zero <= k) {
+            area = max(area, size);
+            ++i, ++j;
+        } else {
+            ++pi, ++pj;
+        }
+    }
+    return area;
+}
+
+
+int solve(vector<vector<int>> &matrix, int k) {
+    int n = matrix.size();
+    int m = matrix[0].size();
+    vector<vector<int>> A(n, vector<int>(m, 0));
+    A[0][0] = matrix[0][0];
+    for(int i=1; i<n; i++) {
+        A[i][0] = A[i-1][0] + matrix[i][0];
+    }
+    for(int j=1; j<m; j++) {
+        A[0][j] = A[0][j-1] + matrix[0][j];
+    }
+    for(int i=1; i<n; i++) {
+        for(int j=1; j<m; j++) {
+            A[i][j] = A[i-1][j] + A[i][j-1] - A[i-1][j-1] + matrix[i][j];
+        }
+    }
+    int res = 0;
+    for(int j=0; j<m; j++) {
+        int maxArea = evaluateArea(A, k, 0, j, n, m);
+        res = max(res, maxArea);
+    }
+    for(int i=0; i<n; i++) {
+        int maxArea = evaluateArea(A, k, i, 0, n, m);
+        res = max(res, maxArea);
+    }
+    return res;
+}
+
+
 int main() {
-    vector<vector<int>> matrix = {{1, 0, 1, 0, 0}, {1, 0, 1, 1, 1}, {1, 1, 1, 1, 1}, {1, 0, 0, 1, 0}, {0, 1, 1, 1, 0}};
+    vector<vector<int>> matrix = {{1,1,1,1,0},{1,1,1,1,1},{1,1,1,1,1},{1,0,0,1,0}};
     int k = 2;
     int res = solve(matrix, k);
     cout<<res<<"\n";
