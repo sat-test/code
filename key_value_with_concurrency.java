@@ -1,6 +1,8 @@
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 class VersionedValue {
     String value;
@@ -74,8 +76,8 @@ class KeyValueStore {
             throw new IllegalStateException("No active transaction");
         }
 
-        commitLock.lock(); // Lock to ensure atomic commit
-        try {
+        // commitLock.lock(); // Lock to ensure atomic commit
+        // try {
             // Validate reads
             for (Map.Entry<String, VersionedValue> entry : transaction.readSet.entrySet()) {
                 VersionedValue currentVersionedValue = data.get(entry.getKey());
@@ -85,16 +87,6 @@ class KeyValueStore {
                 }
             }
 
-            // Validate writes (write set conflict detection)
-            for (String key : transaction.writeSet.keySet()) {
-                VersionedValue currentVersionedValue = data.get(key);
-                if (currentVersionedValue != null && !transaction.readSet.containsKey(key)) {
-                    // Conflict: Another thread modified the key
-                    currentTransaction.remove();
-                    return false;
-                }
-            }
-            
             // Apply writes and deletes
             for (String key : transaction.deleteSet) {
                 data.remove(key);
@@ -105,11 +97,10 @@ class KeyValueStore {
 
             currentTransaction.remove();
             return true;
-        } finally {
-            commitLock.unlock();
-        }
+        // } finally {
+        //     commitLock.unlock();
+        // }
     }
-
 
     public void rollback() {
         Transaction transaction = currentTransaction.get();
@@ -149,7 +140,15 @@ public class Main {
         // Thread 1: Perform transaction
         Thread t1 = new Thread(() -> {
             kvStore.begin();
+            System.out.println(kvStore.get("key5"));
             kvStore.set("key5", "value5");
+            try {
+                Thread.sleep(500); // Sleep for 1 second to simulate delay
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupt status
+                System.out.println("Thread 3 interrupted during sleep");
+                return;
+            }
             kvStore.commit();
             System.out.println("Thread 1 committed");
         });
@@ -157,35 +156,36 @@ public class Main {
         // Thread 2: Perform concurrent transaction
         Thread t2 = new Thread(() -> {
             kvStore.begin();
-            kvStore.set("key6", "value6");
+            kvStore.set("key6", "value2");
             if (kvStore.commit()) {
                 System.out.println("Thread 2 committed");
             } else {
                 System.out.println("Thread 2 rollback due to conflict");
             }
         });
-
+        
         // Thread 3: Perform concurrent transaction
         Thread t3 = new Thread(() -> {
             kvStore.begin();
-            kvStore.set("key5", "value6");
+            System.out.println(kvStore.get("key5"));
+            try {
+                Thread.sleep(1000); // Sleep for 1 second to simulate delay
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restore interrupt status
+                System.out.println("Thread 3 interrupted during sleep");
+                return;
+            }
             if (kvStore.commit()) {
                 System.out.println("Thread 3 committed");
             } else {
                 System.out.println("Thread 3 rollback due to conflict");
             }
         });
-
+        
         t1.start();
-        t2.start();
-
-        try {
-            Thread.sleep(1500); // Delay execution of t3 by 1 second
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
+        t2.start();        
         t3.start();
+
         
     }
 }
