@@ -76,8 +76,8 @@ class KeyValueStore {
             throw new IllegalStateException("No active transaction");
         }
 
-        // commitLock.lock(); // Lock to ensure atomic commit
-        // try {
+        commitLock.lock(); // Lock to ensure atomic commit
+        try {
             // Validate reads
             for (Map.Entry<String, VersionedValue> entry : transaction.readSet.entrySet()) {
                 VersionedValue currentVersionedValue = data.get(entry.getKey());
@@ -97,9 +97,9 @@ class KeyValueStore {
 
             currentTransaction.remove();
             return true;
-        // } finally {
-        //     commitLock.unlock();
-        // }
+        } finally {
+            commitLock.unlock();
+        }
     }
 
     public void rollback() {
