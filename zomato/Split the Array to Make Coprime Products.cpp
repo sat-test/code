@@ -18,3 +18,49 @@ Output: -1
 Explanation: The table above shows the values of the product of the first i + 1 elements, the remaining elements, and their gcd at each index i.
 There is no valid split.
 */
+
+class Solution {
+public:
+    vector<int> getPrimeFactors(int num) {
+        vector<int> factors;
+        for(int p=2; p*p <= num; p++) {
+            if(num%p == 0) {
+                factors.push_back(p);
+                while(num%p == 0) {
+                    num /= p;
+                }
+            }
+        }
+
+        if(num > 1) {
+            factors.push_back(num);
+        }
+        return factors;
+    }
+
+    int findValidSplit(vector<int>& nums) {
+        int n = nums.size();
+        unordered_map<int, int> last;
+        vector<vector<int>> primeFactors(n);
+
+        for(int i=0; i<n; i++) {
+            primeFactors[i] = getPrimeFactors(nums[i]);
+            for(int p: primeFactors[i]) {
+                last[p] = i;
+            }
+        }
+
+        int rightMost = 0;
+        for(int i=0; i<n-1; i++) {
+            for(int p: primeFactors[i]) {
+                rightMost = max(rightMost, last[p]);
+            }
+
+            if(i == rightMost) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+};
